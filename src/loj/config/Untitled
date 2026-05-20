@@ -1,0 +1,56 @@
+analyze_onchain:
+  description: >
+    Extract raw blockchain data. Analyze short-term holder cohorts and flows.
+    CRITICAL RULE: You must ONLY analyze and select assets from this exact whitelist: {token_whitelist}.
+    Ignore any other coins in the market. Filter this list down to the top selected tokens with the best on-chain momentum today.
+  expected_output: "3 key support/resistance levels based on Realized Price for whitelisted tokens."
+  agent: on_chain_analyst
+
+analyze_derivatives:
+  description: "Review Open Interest, Funding Rates, and open CME gaps for the selected whitelisted tokens."
+  expected_output: "A list of liquidity traps and prediction for the next price spike."
+  agent: off_chain_expert
+
+macro_assessment:
+  description: >
+    Analyze the economic calendar, interest rates, and fundamental news OVER THE PAST 7 DAYS.
+    Do not just look at today. Create a weekly summary to establish the overarching market trend
+    and identify if the general bias for the week is Bullish, Bearish, or Neutral.
+  expected_output: "Assessment of the current weekly macro regime (Risk-On or Risk-Off)."
+  agent: macro_strategist
+
+audit_ecosystems:
+  description: "Investigate profit margins and real fee revenue of major L2 networks from the whitelist."
+  expected_output: "A red list of networks exhibiting high technical/economic risks."
+  agent: fundamental_auditor
+
+chart_analysis:
+  description: >
+    Scan the price charts of filtered tokens focusing EXCLUSIVELY on the 1-DAY (Daily) timeframe.
+    Find immediate Order Blocks, FVG, and liquidity nodes for TODAY to execute swing trading setup.
+  expected_output: "Exact coordinates for Entry, Support, and Resistance based on the daily chart."
+  agent: technical_analyst
+
+options_analysis:
+  description: "Analyze Gamma Exposure (Gex) and extract Max Pain levels for the selected assets."
+  expected_output: "A numerical report of critical options levels and market maker positioning."
+  agent: options_quant
+
+portfolio_management:
+  description: >
+    Take the daily structural levels provided by the Technical Analyst.
+    Calculate the exact Stop Loss (SL) and Take Profit (TP) prices.
+    CRITICAL RULE: The setup must have a minimum Risk-to-Reward ratio of 1:2.
+    If the technical setup does not allow for this, recommend skipping the trade.
+  expected_output: "Exact proposed price levels for Entry, Stop Loss, and Take Profit based on 1:2 R/R."
+  agent: portfolio_pm
+
+generate_final_score:
+  description: "Read all 7 previous reports, combine weekly macro bias with daily technical levels, and issue a definitive scored trading decision."
+  expected_output: "A structured JSON object containing action, score, entry, exact stop loss, exact take profit, and rationale."
+  agent: scoring_arbiter
+
+create_viral_content:
+  description: "Write a viral 3-part Twitter thread and a cinematic video script with emotional stage directions based on the final decision."
+  expected_output: "A formatted text output containing the X thread and the Holoworld avatar script."
+  agent: ai_influencer

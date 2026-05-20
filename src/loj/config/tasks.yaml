@@ -1,0 +1,35 @@
+judge_task:
+  description: >
+    Analyze the following live market payload for {symbol}:
+    {market_data}
+    
+    CRITICAL: You must read the EXACT live price from the 'Technical' or 'DEX_Data' field in the payload. DO NOT hallucinate.
+    
+    Calculate a conviction score (0-100) and define your 'trend_bias'.
+    - If score is >= 75, trend_bias MUST be 'Bullish' (Buy).
+    - If score is <= 49, trend_bias MUST be 'Bearish' (Short/Sell).
+    
+    Define Entry, Stop Loss (SL), and Take Profit (TP) around the CURRENT REAL PRICE using these STRICT dynamic parameters:
+    - IF Bearish (Score <= 49): Calculate SL exactly 4% away from Entry, and TP exactly 9% away from Entry.
+    - IF Bullish (Score >= 75): Calculate SL exactly 7% away from Entry, and TP exactly 15% away from Entry.
+    
+    Your 'rationale' MUST explicitly cite the exact numbers from the payload. If Off-Chain Futures data (like Funding Rate or Open Interest) is available, YOU MUST include it in the rationale to make it sound like advanced Smart Money analysis.
+  expected_output: "A strictly formatted JSON containing score, trend_bias, current_price, entry, sl, tp, and a data-heavy rationale."
+narrate_task:
+  description: >
+    Take this verified trade setup from the judge:
+    {judge_output}
+    
+    Write a viral, high-conviction X (Crypto Twitter) post. 
+    
+    CRITICAL RULES:
+    1. Output EXACTLY 4-5 lines. NEVER repeat any sentence or line twice.
+    2. TONE: You are a "Smart Money Alpha Caller". Be edgy, confident, and use cool crypto slang.
+    3. Dynamically adapt to the 'trend_bias'.
+    
+    FORMAT STRICTLY AS FOLLOWS:
+    Line 1: [Explosive Hook with cashtag like $LINK]
+    Line 2: 🎯 [Direction (LONG/SHORT)] | Price: $[current_price] | Entry: $[entry_price] | TP: $[take_profit] | SL: $[stop_loss]
+    Line 3-4: 🧠 The Alpha: YOU MUST START THIS SENTENCE WITH FUNDING RATE AND OPEN INTEREST DATA! (e.g., "Funding Rate is at -0.01% and OI is massively building up to $10M..."). After citing the derivatives data, mention the RSI or Sentiment to complete the thesis.
+    Line 5: [Bold closing thought or warning] + #Crypto tags.
+  expected_output: "A highly engaging X post that strictly includes Off-Chain numbers."
