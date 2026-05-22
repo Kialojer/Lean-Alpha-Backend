@@ -1,0 +1,13 @@
+{
+    "asset": "BTCUSDT",
+    "action": "SELL",
+    "allocation_pct": 20,
+    "leverage": 3,
+    "score": 28,
+    "trend_bias": "Bearish",
+    "current_price": 77310.12,
+    "entry_price": 77310.12,
+    "stop_loss": 81275.13,
+    "take_profit": 73848.61,
+    "rationale": "The current market sentiment is classified as 'Fear' with a score of 28, indicating a bearish outlook. The DXY trend is up, which typically correlates with a stronger dollar and weaker BTC prices. The technical indicators show an RSI of 46.63, suggesting a neutral position, and a MACD histogram of -563.16, indicating bearish momentum. Given these factors, the conviction score falls below 30, leading to a 'SELL' action with a leverage of 3. The stop loss is set at 5% above the entry price (81275.13) to limit potential losses, while the take profit is set at 5% below the entry price (73848.61) to secure gains in a declining market."
+}

@@ -1,59 +1,65 @@
-from dotenv import load_dotenv
+import argparse
+import json
 import os
-
-# Load environment variables (API Keys) from .env file
-load_dotenv()
-
 from loj.crew import TradingSystem
+# ایمپورت کردن ماژول حافظه و اجرا
+from loj.tools.wallet_tools import check_position, execute_signal 
 
 def run():
-    """
-    This function is required by the CrewAI entry point in pyproject.toml.
-    It serves as the main execution loop for our Trading Engine.
-    """
-    # Initialize the trading system
+    parser = argparse.ArgumentParser(description="Autonomous Hyperliquid Trading Agent")
+    parser.add_argument("--ticker", type=str, default="BTCUSDT", help="Target coin")
+    parser.add_argument("--type", type=str, default="CEX", choices=["CEX", "DEX"], help="Market type")
+    parser.add_argument("--protocol", type=str, default=None, help="Protocol name if DEX")
+    
+    args = parser.parse_args()
+    identifier = args.ticker.upper()
+    
+    if args.type == "CEX" and not identifier.endswith("USDT"):
+        identifier += "USDT"
+
+    asset_pure = identifier.replace("USDT", "")
+
+    print(f"🤖 [AUTO-MODE] Initiating sequence for {identifier} on {args.type}...")
+    
+    # 🚨 ۱. بررسی حافظه قبل از هر کاری
+    status = check_position(asset_pure)
+    if status == "OPEN":
+        print(f"🛡️ [RISK MANAGER] We already have an OPEN position for {asset_pure}.")
+        print("🛑 Skipping AI analysis to prevent over-trading and duplicate fees.")
+        return  # خروج کامل از برنامه، ایجنت‌ها بیدار نمی‌شوند!
+
+    # ۲. اگر پوزیشنی باز نبود، هوش مصنوعی را بیدار کن
     system = TradingSystem()
-    
-    print("="*50)
-    print("Welcome to the Lean Alpha Trading Engine.")
-    print("="*50)
-    
-    # Step 1: Ask for the market type
-    print("Where is your asset traded?")
-    print("1. CEX (Centralized Exchange like Binance)")
-    print("2. DEX (Decentralized Exchange / DefiLlama)")
-    
-    choice = input("Enter 1 or 2: ").strip()
-    
-    if choice == "1":
+    result = system.run_pipeline(
+        identifier=identifier,
+        asset_type=args.type,
+        protocol_name=args.protocol
+    )
+
+    if result and "signal" in result:
+        output_file = "signal.json"
+        try:
+            signal_dict = json.loads(result["signal"])
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(signal_dict, f, indent=4)
+            print(f"\n✅ [SUCCESS] AI Signal saved to {output_file}")
+            
+        except json.JSONDecodeError:
+            print("\n[WARNING] Could not parse JSON. Saving raw text...")
+            with open("signal_raw.txt", "w", encoding="utf-8") as f:
+                f.write(result["signal"])
+            return
+
+        print("\n" + "="*50)
+        print("🚀 SOCIAL MEDIA PAYLOAD (X):")
+        print("="*50)
+        print(result["tweet"])
         
-        print("\n--- CEX Analysis ---")
-        identifier = input("Enter the coin ticker (e.g., BTC, ETH): ").strip().upper()
-        
-        if not identifier.endswith("USDT"):
-            identifier += "USDT"
-        print(f"\n🚀 Initiating analysis for {identifier} on Centralized Exchanges...")
-        system.run_pipeline(
-            identifier=identifier, 
-            asset_type="CEX"
-        )
-        
-    elif choice == "2":
-       
-        print("\n--- DEX Analysis ---")
-       
-        identifier = input("Enter the token Symbol or Smart Contract Address (e.g., PEPE, link, 0x...): ").strip()
-        protocol = input("Enter the chain/protocol name (e.g., polygon, solana, ethereum): ").strip().lower()
-        
-        print(f"\n🚀 Initiating analysis for token {identifier} on {protocol.capitalize()}...")
-        system.run_pipeline(
-            identifier=identifier, 
-            asset_type="DEX", 
-            protocol_name=protocol
-        )
+        # 🚨 ۳. ارسال سیگنال به ماژول ترید و ذخیره در حافظه
+        execute_signal(output_file, paper_trading=True)
         
     else:
-        print("❌ Invalid selection. Please restart and enter 1 or 2.")
+        print("❌ [ERROR] Pipeline execution failed.")
 
 if __name__ == "__main__":
     run()

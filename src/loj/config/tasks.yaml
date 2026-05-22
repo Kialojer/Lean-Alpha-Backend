@@ -3,18 +3,20 @@ judge_task:
     Analyze the following live market payload for {symbol}:
     {market_data}
     
-    CRITICAL: You must read the EXACT live price from the 'Technical' or 'DEX_Data' field in the payload. DO NOT hallucinate.
+    CRITICAL: Read the EXACT live price from the payload. DO NOT hallucinate.
     
-    Calculate a conviction score (0-100) and define your 'trend_bias'.
-    - If score is >= 75, trend_bias MUST be 'Bullish' (Buy).
-    - If score is <= 49, trend_bias MUST be 'Bearish' (Short/Sell).
+    Calculate a conviction score (0-100). Based on this score, you MUST strictly define 'action' (BUY for Long, SELL for Short), 'leverage', Stop Loss (SL) distance, and Take Profit (TP) distance from the Entry price:
+    - IF action is 'SELL' (Short): Stop Loss MUST be calculated HIGHER than Entry (+%), and Take Profit MUST be calculated LOWER than Entry (-%).
+    - IF action is 'BUY' (Long): Stop Loss MUST be calculated LOWER than Entry (-%), and Take Profit MUST be calculated HIGHER than Entry (+%).
+    - Score >= 75: action = 'BUY', leverage = 6, SL = 5% away, TP = 10% away, allocation_pct = 20
+    - Score 50-74: action = 'BUY', leverage = 4, SL = 7% away, TP = 7% away, allocation_pct = 10
+    - Score 30-49: action = 'SELL', leverage = 3, SL = 6% away, TP = 8% away, allocation_pct = 10
+    - Score < 30: action = 'SELL', leverage = 3, SL = 5% away, TP = 5% away, allocation_pct = 20
     
-    Define Entry, Stop Loss (SL), and Take Profit (TP) around the CURRENT REAL PRICE using these STRICT dynamic parameters:
-    - IF Bearish (Score <= 49): Calculate SL exactly 4% away from Entry, and TP exactly 9% away from Entry.
-    - IF Bullish (Score >= 75): Calculate SL exactly 7% away from Entry, and TP exactly 15% away from Entry.
+    Using the CURRENT REAL PRICE as your baseline Entry, calculate the exact numerical values for SL and TP based on the percentage distances defined above.
     
-    Your 'rationale' MUST explicitly cite the exact numbers from the payload. If Off-Chain Futures data (like Funding Rate or Open Interest) is available, YOU MUST include it in the rationale to make it sound like advanced Smart Money analysis.
-  expected_output: "A strictly formatted JSON containing score, trend_bias, current_price, entry, sl, tp, and a data-heavy rationale."
+    Your 'rationale' MUST explicitly cite the exact numbers from the payload (including Off-Chain data) and explain the chosen leverage and risk parameters.
+  expected_output: "A strict JSON containing action, leverage, allocation_pct, score, trend_bias, current_price, entry, sl, tp, and rationale."
 narrate_task:
   description: >
     Take this verified trade setup from the judge:
