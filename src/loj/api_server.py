@@ -36,7 +36,7 @@ def get_status():
 def trigger_agent_pipeline(request: TradeRequest, api_key: str = Security(verify_api_key)):
     """اتصال انفرادی برای زمان‌هایی که دستی یا از طرف ویرچوالز صدا زده می‌شود"""
     try:
-        cmd = ["python", "-m", "loj.main", "--ticker", ticker, "--type", "CEX"]
+        cmd = ["python", "-m", "loj.main", "--ticker", request.ticker, "--type", "CEX"]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         
         if os.path.exists("signal.json"):
