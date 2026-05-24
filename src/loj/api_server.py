@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException, Security
-from fastapi.security import APIKeyHeader
 import json
 import os
 import subprocess
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from loj.tools.wallet_tools import check_position
 
@@ -17,33 +17,58 @@ def verify_api_key(api_key: str = Security(api_key_header)):
         raise HTTPException(status_code=403, detail="Invalid Secret Key")
     return api_key
 
+class TradeRequest(BaseModel):
+    ticker: str = "BTC"
+    market_type: str = "CEX"
 
+# دقیقاً همان ۲ ارزی که می‌خواستی
 TARGET_ASSETS = ["BTC", "ETH"]
 
 @app.get("/status")
 def get_status():
+    """مشاهده وضعیت پوزیشن‌ها"""
     if os.path.exists("open_positions.json"):
-        with open("open_positions.json", "r") as f: return json.load(f)
-    return {"message": "No active positions."}
+        with open("open_positions.json", "r") as f:
+            return json.load(f)
+    return {"message": "No active positions in memory."}
+
+@app.post("/run-analysis")
+def trigger_agent_pipeline(request: TradeRequest, api_key: str = Security(verify_api_key)):
+    """اتصال انفرادی برای زمان‌هایی که دستی یا از طرف ویرچوالز صدا زده می‌شود"""
+    try:
+        cmd = ["python", "-m", "src.loj.main", "--ticker", request.ticker, "--type", request.market_type]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
+        if os.path.exists("signal.json"):
+            with open("signal.json", "r") as f:
+                signal_data = json.load(f)
+            return {
+                "status": "success",
+                "execution_log": result.stdout,
+                "payload": signal_data
+            }
+        else:
+            return {"status": "skipped_or_no_signal", "log": result.stdout}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {e.stderr}")
 
 @app.post("/run-all-assets")
 def trigger_full_scan(api_key: str = Security(verify_api_key)):
-    """این روت توسط Cron-job صدا زده می‌شود تا هر ۵ ارز را اسکن کند"""
+    """این روت توسط Cron-job صدا زده می‌شود تا چرخشی هر ۲ ارز را اسکن کند"""
     summary = {}
     
     for count, asset in enumerate(TARGET_ASSETS):
-        # بررسی حافظه: اگر پوزیشن باز روی این ارز داریم، اسکن را برایش رد کن
+        # بررسی حافظه پوزیشن‌ها
         if check_position(asset) == "OPEN":
             summary[asset] = "SKIPPED_ALREADY_OPEN"
             continue
             
         ticker = f"{asset}USDT"
-        print(f"🔍 System scanning target {count+1}/5: {ticker}")
+        print(f"🔍 System scanning target {count+1}/{len(TARGET_ASSETS)}: {ticker}")
         
         try:
-            # اجرای مدل هوش مصنوعی برای این ارز خاص
             cmd = ["python", "-m", "src.loj.main", "--ticker", ticker, "--type", "CEX"]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
             summary[asset] = "SCAN_COMPLETED"
         except subprocess.CalledProcessError as e:
             summary[asset] = f"FAILED: {e.stderr}"
