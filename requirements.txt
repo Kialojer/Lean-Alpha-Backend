@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+crewai
+langchain-openai
+hyperliquid-python-sdk
+pydantic
+python-dotenv
+eth-account
+pyyaml
+requests
+yfinance
