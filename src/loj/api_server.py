@@ -36,7 +36,7 @@ def get_status():
 def trigger_agent_pipeline(request: TradeRequest, api_key: str = Security(verify_api_key)):
     """اتصال انفرادی برای زمان‌هایی که دستی یا از طرف ویرچوالز صدا زده می‌شود"""
     try:
-        cmd = ["python", "-m", "src.loj.main", "--ticker", request.ticker, "--type", request.market_type]
+        cmd = ["python", "-m", "loj.main", "--ticker", ticker, "--type", "CEX"]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         
         if os.path.exists("signal.json"):
@@ -67,7 +67,7 @@ def trigger_full_scan(api_key: str = Security(verify_api_key)):
         print(f"🔍 System scanning target {count+1}/{len(TARGET_ASSETS)}: {ticker}")
         
         try:
-            cmd = ["python", "-m", "src.loj.main", "--ticker", ticker, "--type", "CEX"]
+            cmd = ["python", "-m", "loj.main", "--ticker", ticker, "--type", "CEX"]
             subprocess.run(cmd, capture_output=True, text=True, check=True)
             summary[asset] = "SCAN_COMPLETED"
         except subprocess.CalledProcessError as e:

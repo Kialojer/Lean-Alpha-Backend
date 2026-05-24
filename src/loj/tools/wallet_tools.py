@@ -1,5 +1,6 @@
 import json
 import os
+from pickle import FALSE
 import eth_account
 from eth_account.signers.local import LocalAccount
 from hyperliquid.info import Info
@@ -26,7 +27,7 @@ def check_position(asset: str) -> str:
         opened_at = datetime.fromisoformat(positions[asset]["opened_at"])
         if datetime.now() - opened_at > timedelta(hours=48):
             print(f"⏰ [TIME STOP] Position for {asset} open for >72h. Closing.")
-            close_position(asset, paper_trading=True) # زمان اجرای واقعی روی Mainnet این را False کن
+            close_position(asset, paper_trading=False) # زمان اجرای واقعی روی Mainnet این را False کن
             return "CLOSED_DUE_TO_TIME"
         return "OPEN"
     return "NONE"

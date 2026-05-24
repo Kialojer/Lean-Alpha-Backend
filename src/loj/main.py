@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from pickle import FALSE
 from loj.crew import TradingSystem
 # ایمپورت کردن ماژول حافظه و اجرا
 from loj.tools.wallet_tools import check_position, execute_signal 
@@ -56,7 +57,7 @@ def run():
         print(result["tweet"])
         
         # 🚨 ۳. ارسال سیگنال به ماژول ترید و ذخیره در حافظه
-        execute_signal(output_file, paper_trading=True)
+        execute_signal(output_file, paper_trading=False)
         
     else:
         print("❌ [ERROR] Pipeline execution failed.")
