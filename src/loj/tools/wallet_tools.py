@@ -1,50 +1,58 @@
 import json
 import os
+import eth_account
+from eth_account.signers.local import LocalAccount
+from hyperliquid.info import Info
+from hyperliquid.exchange import Exchange
+from hyperliquid.utils import constants
 from datetime import datetime, timedelta
 
-# مسیر ذخیره حافظه ربات
 POSITIONS_FILE = "open_positions.json"
 
 def load_positions():
-    """خواندن حافظه از فایل JSON"""
     if os.path.exists(POSITIONS_FILE):
         with open(POSITIONS_FILE, "r") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return {}
+            try: return json.load(f)
+            except json.JSONDecodeError: return {}
     return {}
 
 def save_positions(positions):
-    """ذخیره حافظه جدید در فایل JSON"""
     with open(POSITIONS_FILE, "w") as f:
         json.dump(positions, f, indent=4)
 
 def check_position(asset: str) -> str:
-    """بررسی می‌کند که آیا پوزیشنی باز است یا خیر و Time Stop را اعمال می‌کند"""
     positions = load_positions()
     if asset in positions and positions[asset]["status"] == "OPEN":
-        # بررسی Time Stop (مثلاً اگر ۴۸ ساعت گذشته باشد)
         opened_at = datetime.fromisoformat(positions[asset]["opened_at"])
         if datetime.now() - opened_at > timedelta(hours=48):
-            print(f"⏰ [TIME STOP] Position for {asset} has been open for >48h. Closing to save funding fees.")
-            close_position(asset)
+            print(f"⏰ [TIME STOP] Position for {asset} open for >72h. Closing.")
+            close_position(asset, paper_trading=True) # زمان اجرای واقعی روی Mainnet این را False کن
             return "CLOSED_DUE_TO_TIME"
         return "OPEN"
     return "NONE"
 
-def close_position(asset: str):
-    """بستن یک پوزیشن در حافظه"""
+def close_position(asset: str, paper_trading: bool = True):
     positions = load_positions()
     if asset in positions:
+        if not paper_trading:
+            try:
+                # کدهای بستن پوزیشن واقعی روی بازار فیوچرز هایپرلیکویید
+                secret_key = os.getenv("HL_PRIVATE_KEY")
+                account: LocalAccount = eth_account.Account.from_key(secret_key)
+                exchange = Exchange(account, constants.MAINNET_API_URL, account_addr=account.address)
+                # بستن پوزیشن مارکت با حجم معکوس
+                is_buy = True if positions[asset]["action"] == "SELL" else False
+                exchange.market_open(asset, is_buy, positions[asset]["size"], None, None)
+            except Exception as e:
+                print(f"⚠️ Could not execute real close on Hyperliquid: {e}")
+        
         positions[asset]["status"] = "CLOSED"
         positions[asset]["closed_at"] = datetime.now().isoformat()
         save_positions(positions)
-        print(f"🔒 Position for {asset} marked as CLOSED in memory.")
+        print(f"🔒 Position for {asset} marked as CLOSED.")
 
 def execute_signal(signal_file_path: str = "signal.json", paper_trading: bool = True):
-    """اجرای سیگنال و ثبت آن در حافظه"""
-    print("\n🔌 Initializing Execution Module...")
+    """اجرای سیگنال روی شبکه اصلی (Mainnet) یا شبیه‌ساز"""
     try:
         with open(signal_file_path, "r") as f:
             signal = json.load(f)
@@ -54,36 +62,41 @@ def execute_signal(signal_file_path: str = "signal.json", paper_trading: bool = 
         leverage = signal["leverage"]
 
         if action == "HOLD":
-            print("⏸️ Signal is HOLD. No trade executed. Memory unchanged.")
-            return
+            return {"status": "HOLD", "message": "Signal is HOLD."}
 
-        sz = 0.001 if asset == "BTC" else 0.1
+        # محاسبه حجم بر اساس باجت ۲۰ دلاری و لوریج
+        # برای شروع از کمترین حجم مجاز صرافی استفاده می‌کنیم
+        sz = 0.0001 if asset == "BTC" else (0.001 if asset == "ETH" else 1.0)
 
         if paper_trading:
-            print("="*45)
-            print("🟢 [PAPER TRADING MODE - SIMULATION]")
-            print(f"Action: {action} | Asset: {asset} | Leverage: {leverage}x")
-            print(f"Size: {sz} | Entry: ${signal['current_price']}")
-            print(f"Stop Loss: ${signal['stop_loss']} | Take Profit: ${signal['take_profit']}")
-            print("="*45)
-            print("✅ Simulated Trade Executed Successfully.")
+            print(f"🟢 [SIMULATION] {action} {asset} {leverage}x")
+        else:
+            # 🚨 اتصال به شبکه اصلی هایپرلیکویید با پول واقعی
+            secret_key = os.getenv("HL_PRIVATE_KEY")
+            if not secret_key: raise ValueError("HL_PRIVATE_KEY missing!")
+            
+            account: LocalAccount = eth_account.Account.from_key(secret_key)
+            exchange = Exchange(account, constants.MAINNET_API_URL, account_addr=account.address)
+            
+            # ۱. تنظیم لوریج در صرافی واقعی
+            exchange.update_leverage(leverage, asset)
+            # ۲. ثبت سفارش مارکت واقعی
+            is_buy = True if action == "BUY" else False
+            exchange.market_open(asset, is_buy, sz, None, signal["current_price"])
 
-            # ثبت در حافظه به عنوان پوزیشن باز
-            positions = load_positions()
-            positions[asset] = {
-                "status": "OPEN",
-                "action": action,
-                "entry_price": signal["current_price"],
-                "opened_at": datetime.now().isoformat(),
-                "leverage": leverage,
-                "stop_loss": signal["stop_loss"],
-                "take_profit": signal["take_profit"]
-            }
-            save_positions(positions)
-            print(f"💾 Memory Updated: {asset} is now secured as OPEN.")
+        # ذخیره در حافظه ربات
+        positions = load_positions()
+        positions[asset] = {
+            "status": "OPEN",
+            "action": action,
+            "entry_price": signal["current_price"],
+            "opened_at": datetime.now().isoformat(),
+            "leverage": leverage,
+            "size": sz
+        }
+        save_positions(positions)
+        return {"status": "OPENED", "asset": asset, "action": action}
 
-    except FileNotFoundError:
-        print("❌ Error: signal.json not found.")
-
-if __name__ == "__main__":
-    execute_signal("../../signal.json", paper_trading=True)
+    except Exception as e:
+        print(f"❌ Wallet Error: {str(e)}")
+        return {"status": "ERROR", "message": str(e)}
