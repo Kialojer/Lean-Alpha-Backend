@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from loj.tools.wallet_tools import check_position
+import random
+from loj.tools.wallet_tools import check_position, load_positions
 
 app = FastAPI(title="Lean Alpha Multi-Asset Gateway")
 
@@ -54,22 +56,38 @@ def trigger_agent_pipeline(request: TradeRequest, api_key: str = Security(verify
 
 @app.post("/run-all-assets")
 def trigger_full_scan(api_key: str = Security(verify_api_key)):
-    """این روت توسط Cron-job صدا زده می‌شود تا چرخشی هر ۲ ارز را اسکن کند"""
-    summary = {}
+    """اسکن چرخشی عادلانه با رعایت محدودیت باجت"""
     
-    for count, asset in enumerate(TARGET_ASSETS):
-        # بررسی حافظه پوزیشن‌ها
-        if check_position(asset) == "OPEN":
-            summary[asset] = "SKIPPED_ALREADY_OPEN"
-            continue
-            
+    # قانون ۱: آیا کلاً پوزیشن بازی در سیستم داریم؟ (جلوگیری از ارور کمبود مارجین)
+    positions = load_positions()
+    for asset, data in positions.items():
+        # همزمان تایم‌استاپ را هم چک می‌کنیم که اگر وقتش گذشته، اول بسته‌شود
+        status = check_position(asset) 
+        if status == "OPEN":
+            return {
+                "status": "SKIPPED", 
+                "message": f"Global Limit: Currently holding an open position on {asset}."
+            }
+
+    # قانون ۲: بُر زدن لیست ارزها برای عدالت
+    assets_to_scan = TARGET_ASSETS.copy()
+    random.shuffle(assets_to_scan)
+    
+    summary = {}
+    for count, asset in enumerate(assets_to_scan):
         ticker = f"{asset}USDT"
-        print(f"🔍 System scanning target {count+1}/{len(TARGET_ASSETS)}: {ticker}")
+        print(f"🔍 System scanning target {count+1}/{len(assets_to_scan)}: {ticker}")
         
         try:
             cmd = ["python", "-m", "loj.main", "--ticker", ticker, "--type", "CEX"]
             subprocess.run(cmd, capture_output=True, text=True, check=True)
             summary[asset] = "SCAN_COMPLETED"
+            
+            # قانون ۳: اگر در همین اسکن، ربات پوزیشنی باز کرد، اسکن ارز بعدی را متوقف کن
+            if check_position(asset) == "OPEN":
+                summary["system_message"] = f"Budget locked for {asset}. Halting further scans."
+                break
+                
         except subprocess.CalledProcessError as e:
             summary[asset] = f"FAILED: {e.stderr}"
             
