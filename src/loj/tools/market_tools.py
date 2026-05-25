@@ -162,7 +162,7 @@ def build_market_payload(
     }
 
     if asset_type == "CEX":
-        # این بخش اصلاح شد تا پرانتزها درست بسته شوند
+        
         payload["Technical"] = get_technical_data(
             identifier,
             is_dex=False
