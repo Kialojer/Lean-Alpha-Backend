@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize FastMCP Server
 mcp = FastMCP("LeanAlphaTrader")
 
 system = TradingSystem()
@@ -39,5 +38,5 @@ def analyze_crypto_market(identifier: str, asset_type: str = "CEX", protocol_nam
         return f"Error during analysis: {str(e)}"
 
 if __name__ == "__main__":
-    # Start the MCP server
+
     mcp.run()
