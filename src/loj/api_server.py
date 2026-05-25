@@ -23,7 +23,7 @@ class TradeRequest(BaseModel):
     ticker: str = "BTC"
     market_type: str = "CEX"
 
-# دقیقاً همان ۲ ارزی که می‌خواستی
+# 
 TARGET_ASSETS = ["BTC", "ETH"]
 
 @app.get("/status")
@@ -58,10 +58,10 @@ def trigger_agent_pipeline(request: TradeRequest, api_key: str = Security(verify
 def trigger_full_scan(api_key: str = Security(verify_api_key)):
     """اسکن چرخشی عادلانه با رعایت محدودیت باجت"""
     
-    # قانون ۱: آیا کلاً پوزیشن بازی در سیستم داریم؟ (جلوگیری از ارور کمبود مارجین)
+    #
     positions = load_positions()
     for asset, data in positions.items():
-        # همزمان تایم‌استاپ را هم چک می‌کنیم که اگر وقتش گذشته، اول بسته‌شود
+        # 
         status = check_position(asset) 
         if status == "OPEN":
             return {
@@ -83,7 +83,7 @@ def trigger_full_scan(api_key: str = Security(verify_api_key)):
             subprocess.run(cmd, capture_output=True, text=True, check=True)
             summary[asset] = "SCAN_COMPLETED"
             
-            # قانون ۳: اگر در همین اسکن، ربات پوزیشنی باز کرد، اسکن ارز بعدی را متوقف کن
+            # 
             if check_position(asset) == "OPEN":
                 summary["system_message"] = f"Budget locked for {asset}. Halting further scans."
                 break
